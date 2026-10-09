@@ -1,0 +1,22 @@
+{
+  "name": "@courtly/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "typecheck": "prisma generate && tsc --noEmit"
+  },
+  "dependencies": {
+    "@courtly/shared": "workspace:*",
+    "@prisma/adapter-mariadb": "7.10.0",
+    "@prisma/client": "7.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "prisma": "7.10.0",
+    "typescript": "catalog:"
+  }
+}
