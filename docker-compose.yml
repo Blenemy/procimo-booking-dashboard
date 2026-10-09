@@ -1,5 +1,9 @@
 name: courtly
 
+x-facility: &facility
+  FACILITY_TIMEZONE: Europe/Lisbon
+  CURRENCY: EUR
+
 services:
   mysql:
     image: mysql:8.4
@@ -20,6 +24,50 @@ services:
       timeout: 5s
       retries: 40
       start_period: 10s
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    environment:
+      DATABASE_URL: mysql://courtly:courtly@mysql:3306/courtly
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      target: api
+    environment:
+      <<: *facility
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://courtly:courtly@mysql:3306/courtly
+    ports:
+      - '3000:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/api/health']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  api-test:
+    profiles: [test]
+    build:
+      context: .
+      target: api-test
+    environment:
+      DATABASE_URL: mysql://courtly:courtly@mysql:3306/courtly_test
+      TEST_DATABASE_URL: mysql://courtly:courtly@mysql:3306/courtly_test
+    depends_on:
+      mysql:
+        condition: service_healthy
 
 volumes:
   mysql-data:
