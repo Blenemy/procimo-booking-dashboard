@@ -3,7 +3,7 @@ import { MILLISECONDS_PER_HOUR } from '../../src/core/time';
 import type { Db } from '../../src/db/client';
 import { PasswordHasher } from '../../src/modules/auth/lib/password-hasher';
 
-export const DEFAULT_PASSWORD = 'password123';
+const DEFAULT_PASSWORD = 'password123';
 
 const passwordHasher = new PasswordHasher();
 let sequence = 0;

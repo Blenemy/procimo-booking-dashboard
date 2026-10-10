@@ -37,7 +37,7 @@ export function fixedClock(iso: string) {
   };
 }
 
-export const testTokenSigner = () => {
+const testTokenSigner = () => {
   const { jwtSecret, sessionTtlHours } = testConfig();
   return new TokenSigner(jwtSecret, sessionTtlHours);
 };

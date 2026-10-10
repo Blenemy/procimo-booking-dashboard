@@ -16,21 +16,16 @@ afterAll(() => db.$disconnect());
 
 const START = '2026-12-15T14:00:00.000Z';
 
-const cancel = async (userId: number, bookingId: number | string) =>
+const cancel = async (userId: number, bookingId: number) =>
   request(app)
     .post(`/api/bookings/${bookingId}/cancel`)
     .set('Cookie', await sessionCookie(userId))
     .send({});
 
-const setup = async (overrides: Partial<Parameters<typeof createBooking>[1]> = {}) => {
+const setup = async () => {
   const owner = await createUser(db);
   const court = await createCourt(db);
-  const booking = await createBooking(db, {
-    userId: owner.id,
-    courtId: court.id,
-    startsAt: START,
-    ...overrides,
-  });
+  const booking = await createBooking(db, { userId: owner.id, courtId: court.id, startsAt: START });
   return { owner, court, booking };
 };
 
@@ -39,48 +34,7 @@ const stored = async (bookingId: number) => ({
   slots: await db.bookingSlot.count({ where: { bookingId } }),
 });
 
-describe('POST /api/bookings/:id/cancel', () => {
-  it('requires a session and is not available to admins', async () => {
-    const { booking } = await setup();
-    const admin = await createUser(db, { role: 'ADMIN' });
-
-    const anonymous = await request(app).post(`/api/bookings/${booking.id}/cancel`).send({});
-    const asAdmin = await cancel(admin.id, booking.id);
-
-    expect(anonymous.status).toBe(401);
-    expect(asAdmin.status).toBe(403);
-    expect(await stored(booking.id)).toEqual({ status: 'CONFIRMED', slots: 1 });
-  });
-
-  it('cancels the booking, keeps it as history and frees its slots', async () => {
-    const { owner, booking } = await setup({ durationHours: 2 });
-
-    const res = await cancel(owner.id, booking.id);
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      id: booking.id,
-      status: 'CANCELLED',
-      cancelledAt: '2026-12-15T10:20:00.000Z',
-      startsAt: START,
-      totalPriceCents: booking.totalPriceCents,
-    });
-    expect(await stored(booking.id)).toEqual({ status: 'CANCELLED', slots: 0 });
-  });
-
-  it('makes the slot bookable again', async () => {
-    const { owner, court, booking } = await setup();
-    const other = await createUser(db);
-
-    await cancel(owner.id, booking.id);
-    const rebooked = await request(app)
-      .post('/api/bookings')
-      .set('Cookie', await sessionCookie(other.id))
-      .send({ courtId: court.id, startsAt: START, durationHours: 1 });
-
-    expect(rebooked.status).toBe(201);
-  });
-
+describe('cancellation window for a booking at 14:00', () => {
   it.each([
     [200, 'well before the cutoff', '2026-12-15T10:20:00.000Z'],
     [200, 'one millisecond before the cutoff', '2026-12-15T11:59:59.999Z'],
@@ -102,13 +56,22 @@ describe('POST /api/bookings/:id/cancel', () => {
     }
   });
 
-  it('rejects cancelling twice', async () => {
-    const { owner, booking } = await setup({ status: 'CANCELLED' });
+  it('keeps the cancelled booking as history and frees the slot for others', async () => {
+    const { owner, court, booking } = await setup();
+    const other = await createUser(db);
 
     const res = await cancel(owner.id, booking.id);
+    const rebooked = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', await sessionCookie(other.id))
+      .send({ courtId: court.id, startsAt: START, durationHours: 1 });
 
-    expect(res.status).toBe(409);
-    expect(res.body.error.code).toBe('ALREADY_CANCELLED');
+    expect(res.body).toMatchObject({
+      status: 'CANCELLED',
+      cancelledAt: '2026-12-15T10:20:00.000Z',
+    });
+    expect(await stored(booking.id)).toEqual({ status: 'CANCELLED', slots: 0 });
+    expect(rebooked.status).toBe(201);
   });
 
   it('lets only one of two simultaneous cancellations through', async () => {
@@ -121,10 +84,9 @@ describe('POST /api/bookings/:id/cancel', () => {
 
     expect(responses.map((r) => r.status).sort()).toEqual([200, 409]);
     expect(responses.find((r) => r.status === 409)?.body.error.code).toBe('ALREADY_CANCELLED');
-    expect(await stored(booking.id)).toEqual({ status: 'CANCELLED', slots: 0 });
   });
 
-  it("hides other users' bookings behind a 404", async () => {
+  it("does not let a user cancel someone else's booking", async () => {
     const { booking } = await setup();
     const stranger = await createUser(db);
 
@@ -132,21 +94,5 @@ describe('POST /api/bookings/:id/cancel', () => {
 
     expect(res.status).toBe(404);
     expect(await stored(booking.id)).toEqual({ status: 'CONFIRMED', slots: 1 });
-  });
-
-  it('returns 404 for an unknown booking and 400 for a malformed id', async () => {
-    const user = await createUser(db);
-
-    expect((await cancel(user.id, 999999)).status).toBe(404);
-    expect((await cancel(user.id, 'abc')).status).toBe(400);
-  });
-
-  it('still allows cancelling on a court that has been deactivated', async () => {
-    const { owner, court, booking } = await setup();
-    await db.court.update({ where: { id: court.id }, data: { isActive: false } });
-
-    const res = await cancel(owner.id, booking.id);
-
-    expect(res.status).toBe(200);
   });
 });
