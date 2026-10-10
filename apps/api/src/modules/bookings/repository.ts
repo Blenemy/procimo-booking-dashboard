@@ -1,3 +1,4 @@
+import type { BookingScope } from '@courtly/shared';
 import type { Db } from '../../db/client';
 import { isUniqueViolation } from '../../db/errors';
 import type { TransactionRetry } from '../../db/transaction-retry';
@@ -17,6 +18,8 @@ const withCourt = {
   court: { select: { id: true, name: true, sportType: true } },
 } satisfies Prisma.BookingInclude;
 
+export type BookingWithCourt = Prisma.BookingGetPayload<{ include: typeof withCourt }>;
+
 const ascending = (slots: Date[]) => [...slots].sort((a, b) => a.getTime() - b.getTime());
 
 export const createBookingsRepository = (db: Db, retry: TransactionRetry) => ({
@@ -25,6 +28,18 @@ export const createBookingsRepository = (db: Db, retry: TransactionRetry) => ({
       where: { courtId, slotStart: { in: slots } },
       select: { slotStart: true },
     }),
+
+  findOwned: (id: number, userId: number) =>
+    db.booking.findFirst({ where: { id, userId }, include: withCourt }),
+
+  listForUser: (userId: number, scope: BookingScope, now: Date) => {
+    const upcoming = scope === 'upcoming';
+    return db.booking.findMany({
+      where: { userId, endsAt: upcoming ? { gt: now } : { lte: now } },
+      orderBy: { startsAt: upcoming ? 'asc' : 'desc' },
+      include: withCourt,
+    });
+  },
 
   createWithSlots: async ({ slots, ...booking }: NewBooking) => {
     try {
@@ -42,9 +57,19 @@ export const createBookingsRepository = (db: Db, retry: TransactionRetry) => ({
       throw error;
     }
   },
+
+  cancel: (id: number, userId: number, now: Date) =>
+    retry.run(() =>
+      db.$transaction(async (tx) => {
+        const { count } = await tx.booking.updateMany({
+          where: { id, userId, status: 'CONFIRMED' },
+          data: { status: 'CANCELLED', cancelledAt: now },
+        });
+        if (count === 0) return null;
+        await tx.bookingSlot.deleteMany({ where: { bookingId: id } });
+        return tx.booking.findUniqueOrThrow({ where: { id }, include: withCourt });
+      }),
+    ),
 });
 
 export type BookingsRepository = ReturnType<typeof createBookingsRepository>;
-export type BookingWithCourt = NonNullable<
-  Awaited<ReturnType<BookingsRepository['createWithSlots']>>
->;

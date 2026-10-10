@@ -14,6 +14,7 @@ export const myBookingsQuerySchema = z.object({
   scope: z.enum(['upcoming', 'past']).default('upcoming'),
 });
 export type MyBookingsQuery = z.infer<typeof myBookingsQuerySchema>;
+export type BookingScope = MyBookingsQuery['scope'];
 
 export interface BookingDto {
   id: number;

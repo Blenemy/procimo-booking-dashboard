@@ -12,7 +12,9 @@ export function bookingsRoutes({
   const router = Router();
   const user = [auth.requireAuth, auth.requireRole('USER')];
 
+  router.get('/bookings/me', ...user, controller.listMine);
   router.post('/bookings', ...user, controller.create);
+  router.post('/bookings/:id/cancel', ...user, controller.cancel);
 
   return router;
 }
