@@ -30,6 +30,7 @@ services:
       context: .
       target: migrate
     environment:
+      <<: *facility
       DATABASE_URL: mysql://courtly:courtly@mysql:3306/courtly
     depends_on:
       mysql:

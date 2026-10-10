@@ -12,7 +12,8 @@
     "typecheck": "prisma generate && tsc --noEmit",
     "prisma:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx --env-file=.env src/seed.ts"
   },
   "dependencies": {
     "@courtly/shared": "workspace:*",

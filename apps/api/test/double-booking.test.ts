@@ -17,7 +17,9 @@ import { holdSlot, waitForBlockedSlotInserts } from './helpers/locks';
 const db = createTestDb();
 const clock = fixedClock('2026-12-15T10:20:00.000Z');
 const app = createTestApp(db, { clock });
-const policy = new BookingPolicy(new FacilityCalendar(testConfig().timezone));
+const { timezone, currency } = testConfig();
+const calendar = new FacilityCalendar(timezone);
+const policy = new BookingPolicy(calendar);
 
 beforeEach(() => resetDb(db));
 afterAll(() => db.$disconnect());
@@ -47,7 +49,14 @@ const buildService = ({
   retry = new TransactionRetry(),
   repository = createBookingsRepository(db, retry),
 }: { retry?: TransactionRetry; repository?: BookingsRepository } = {}) =>
-  createBookingsService({ repository, courts: createCourtsRepository(db), policy, clock });
+  createBookingsService({
+    repository,
+    courts: createCourtsRepository(db),
+    calendar,
+    policy,
+    clock,
+    currency,
+  });
 
 const outcome = (attempt: Promise<unknown>) =>
   attempt.then(

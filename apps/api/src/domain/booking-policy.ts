@@ -1,5 +1,5 @@
 import { ERROR_CODES } from '@courtly/shared';
-import type { BookingDuration } from '@courtly/shared';
+import type { BookingDuration, BookingStatus } from '@courtly/shared';
 import type { FacilityCalendar, OpeningHours } from './facility-calendar';
 import { DateTime } from './luxon';
 
@@ -73,5 +73,11 @@ export class BookingPolicy {
 
   canCancel(startsAt: Date, now: Date): boolean {
     return now <= this.cancellableUntil(startsAt);
+  }
+
+  revenueCents(bookings: { status: BookingStatus; totalPriceCents: number }[]): number {
+    return bookings
+      .filter((booking) => booking.status === 'CONFIRMED')
+      .reduce((sum, booking) => sum + booking.totalPriceCents, 0);
   }
 }

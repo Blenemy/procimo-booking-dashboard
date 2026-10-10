@@ -1,11 +1,19 @@
 import { ERROR_CODES } from '@courtly/shared';
-import type { BookingDto, BookingScope, CreateBookingRequest } from '@courtly/shared';
+import type {
+  AdminBookingDto,
+  AdminDayDto,
+  BookingDto,
+  BookingScope,
+  CreateBookingRequest,
+} from '@courtly/shared';
 import type { Clock } from '../../core/clock';
 import { BOOKING_VIOLATIONS, CANCELLATION_CUTOFF_HOURS } from '../../domain/booking-policy';
 import type { BookingPolicy } from '../../domain/booking-policy';
+import type { FacilityCalendar } from '../../domain/facility-calendar';
 import { AppError, notFound } from '../../http/errors';
 import type { CourtsRepository } from '../courts/repository';
-import type { BookingWithCourt, BookingsRepository } from './repository';
+import { toCourtDto } from '../courts/service';
+import type { BookingWithCourt, BookingWithCourtAndUser, BookingsRepository } from './repository';
 
 const slotTaken = () =>
   new AppError(ERROR_CODES.SLOT_TAKEN, 'This time slot has already been booked');
@@ -22,13 +30,17 @@ const cancellationWindowClosed = () =>
 export function createBookingsService({
   repository,
   courts,
+  calendar,
   policy,
   clock,
+  currency,
 }: {
   repository: BookingsRepository;
   courts: CourtsRepository;
+  calendar: FacilityCalendar;
   policy: BookingPolicy;
   clock: Clock;
+  currency: string;
 }) {
   const toBookingDto = (booking: BookingWithCourt): BookingDto => ({
     id: booking.id,
@@ -41,6 +53,11 @@ export function createBookingsService({
     createdAt: booking.createdAt.toISOString(),
     cancelledAt: booking.cancelledAt?.toISOString() ?? null,
     cancellableUntil: policy.cancellableUntil(booking.startsAt).toISOString(),
+  });
+
+  const toAdminBookingDto = (booking: BookingWithCourtAndUser): AdminBookingDto => ({
+    ...toBookingDto(booking),
+    user: booking.user,
   });
 
   return {
@@ -86,6 +103,35 @@ export function createBookingsService({
     async listMine(userId: number, scope: BookingScope): Promise<BookingDto[]> {
       const bookings = await repository.listForUser(userId, scope, clock.now());
       return bookings.map(toBookingDto);
+    },
+
+    async dayOverview(date: string): Promise<AdminDayDto> {
+      const [allCourts, bookings] = await Promise.all([
+        courts.listAll(),
+        repository.listForDay(calendar.dayRange(date)),
+      ]);
+      const byCourt = new Map<number, BookingWithCourtAndUser[]>();
+      for (const booking of bookings) {
+        byCourt.set(booking.courtId, [...(byCourt.get(booking.courtId) ?? []), booking]);
+      }
+
+      const courtDays = allCourts
+        .filter((court) => court.isActive || byCourt.has(court.id))
+        .map((court) => {
+          const courtBookings = byCourt.get(court.id) ?? [];
+          return {
+            court: toCourtDto(court),
+            revenueCents: policy.revenueCents(courtBookings),
+            bookings: courtBookings.map(toAdminBookingDto),
+          };
+        });
+
+      return {
+        date,
+        currency,
+        totalRevenueCents: courtDays.reduce((sum, day) => sum + day.revenueCents, 0),
+        courts: courtDays,
+      };
     },
   };
 }

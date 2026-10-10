@@ -16,6 +16,7 @@ const ADMIN_ROUTES: [Method, string][] = [
   ['get', '/api/admin/courts'],
   ['post', '/api/admin/courts'],
   ['patch', '/api/admin/courts/1'],
+  ['get', '/api/admin/bookings?date=2026-12-16'],
 ];
 
 const USER_ROUTES: [Method, string][] = [

@@ -1,4 +1,9 @@
-import { createBookingSchema, idParamSchema, myBookingsQuerySchema } from '@courtly/shared';
+import {
+  createBookingSchema,
+  dateQuerySchema,
+  idParamSchema,
+  myBookingsQuerySchema,
+} from '@courtly/shared';
 import type { RequestHandler } from 'express';
 import { HTTP_STATUS } from '../../http/status';
 import { parse } from '../../http/validate';
@@ -21,7 +26,12 @@ export function createBookingsController({ service }: { service: BookingsService
     res.json(await service.cancel(authUser(req).id, id));
   };
 
-  return { listMine, create, cancel };
+  const dayOverview: RequestHandler = async (req, res) => {
+    const { date } = parse(dateQuerySchema, req.query);
+    res.json(await service.dayOverview(date));
+  };
+
+  return { listMine, create, cancel, dayOverview };
 }
 
 export type BookingsController = ReturnType<typeof createBookingsController>;

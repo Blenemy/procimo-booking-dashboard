@@ -21,7 +21,7 @@ CMD ["node", "--enable-source-maps", "dist/server.mjs"]
 
 FROM build AS migrate
 WORKDIR /repo/apps/api
-CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node --enable-source-maps dist/seed.mjs"]
 
 FROM build AS api-test
 WORKDIR /repo/apps/api

@@ -18,7 +18,15 @@ const withCourt = {
   court: { select: { id: true, name: true, sportType: true } },
 } satisfies Prisma.BookingInclude;
 
+const withCourtAndUser = {
+  ...withCourt,
+  user: { select: { id: true, name: true, email: true } },
+} satisfies Prisma.BookingInclude;
+
 export type BookingWithCourt = Prisma.BookingGetPayload<{ include: typeof withCourt }>;
+export type BookingWithCourtAndUser = Prisma.BookingGetPayload<{
+  include: typeof withCourtAndUser;
+}>;
 
 const ascending = (slots: Date[]) => [...slots].sort((a, b) => a.getTime() - b.getTime());
 
@@ -40,6 +48,13 @@ export const createBookingsRepository = (db: Db, retry: TransactionRetry) => ({
       include: withCourt,
     });
   },
+
+  listForDay: (range: { start: Date; end: Date }) =>
+    db.booking.findMany({
+      where: { startsAt: { gte: range.start, lt: range.end } },
+      orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+      include: withCourtAndUser,
+    }),
 
   createWithSlots: async ({ slots, ...booking }: NewBooking) => {
     try {

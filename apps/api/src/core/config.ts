@@ -49,12 +49,24 @@ export interface Config {
   cookieSecure: boolean;
 }
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const result = envSchema.safeParse(env);
+export type SeedConfig = Pick<Config, 'logLevel' | 'databaseUrl' | 'timezone'>;
+
+const seedEnvSchema = envSchema.pick({
+  LOG_LEVEL: true,
+  DATABASE_URL: true,
+  FACILITY_TIMEZONE: true,
+});
+
+const parseEnv = <S extends z.ZodType>(schema: S, env: NodeJS.ProcessEnv): z.output<S> => {
+  const result = schema.safeParse(env);
   if (!result.success) {
     throw new Error(`Invalid environment configuration:\n${z.prettifyError(result.error)}`);
   }
-  const e = result.data;
+  return result.data;
+};
+
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+  const e = parseEnv(envSchema, env);
   return {
     env: e.NODE_ENV,
     port: e.PORT,
@@ -67,4 +79,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     sessionTtlHours: e.SESSION_TTL_HOURS,
     cookieSecure: e.COOKIE_SECURE ?? e.NODE_ENV === 'production',
   };
+}
+
+export function loadSeedConfig(env: NodeJS.ProcessEnv = process.env): SeedConfig {
+  const e = parseEnv(seedEnvSchema, env);
+  return { logLevel: e.LOG_LEVEL, databaseUrl: e.DATABASE_URL, timezone: e.FACILITY_TIMEZONE };
 }

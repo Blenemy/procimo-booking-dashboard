@@ -95,8 +95,10 @@ export function createApp(deps: AppDeps) {
     service: createBookingsService({
       repository: createBookingsRepository(db, retry),
       courts,
+      calendar,
       policy,
       clock,
+      currency: config.currency,
     }),
   });
 
