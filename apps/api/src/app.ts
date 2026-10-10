@@ -6,6 +6,7 @@ import type { Clock } from './core/clock';
 import type { Config } from './core/config';
 import type { Logger } from './core/logger';
 import type { Db } from './db/client';
+import { TransactionRetry } from './db/transaction-retry';
 import { BookingPolicy } from './domain/booking-policy';
 import { FacilityCalendar } from './domain/facility-calendar';
 import { errorHandler, notFoundHandler } from './http/errors';
@@ -17,6 +18,10 @@ import { createAuthGuards } from './modules/auth/middleware';
 import { createUsersRepository } from './modules/auth/repository';
 import { authRoutes } from './modules/auth/routes';
 import { createAuthService } from './modules/auth/service';
+import { createBookingsController } from './modules/bookings/controller';
+import { createBookingsRepository } from './modules/bookings/repository';
+import { bookingsRoutes } from './modules/bookings/routes';
+import { createBookingsService } from './modules/bookings/service';
 import { createCourtsController } from './modules/courts/controller';
 import { createCourtsRepository } from './modules/courts/repository';
 import { courtsRoutes } from './modules/courts/routes';
@@ -62,11 +67,13 @@ export function createApp(deps: AppDeps) {
 
   const calendar = new FacilityCalendar(config.timezone);
   const policy = new BookingPolicy(calendar);
+  const retry = new TransactionRetry();
 
   const passwordHasher = new PasswordHasher();
   const tokenSigner = new TokenSigner(config.jwtSecret, config.sessionTtlHours);
   const users = createUsersRepository(db);
   const auth = createAuthGuards({ users, tokenSigner });
+  const courts = createCourtsRepository(db);
 
   const systemController = createSystemController({
     config,
@@ -78,8 +85,16 @@ export function createApp(deps: AppDeps) {
   });
   const courtsController = createCourtsController({
     service: createCourtsService({
-      repository: createCourtsRepository(db),
+      repository: courts,
       calendar,
+      policy,
+      clock,
+    }),
+  });
+  const bookingsController = createBookingsController({
+    service: createBookingsService({
+      repository: createBookingsRepository(db, retry),
+      courts,
       policy,
       clock,
     }),
@@ -90,6 +105,7 @@ export function createApp(deps: AppDeps) {
   api.use(systemRoutes({ controller: systemController }));
   api.use('/auth', authRoutes({ controller: authController, auth }));
   api.use(courtsRoutes({ controller: courtsController, auth }));
+  api.use(bookingsRoutes({ controller: bookingsController, auth }));
   app.use('/api', api);
 
   app.use(notFoundHandler);

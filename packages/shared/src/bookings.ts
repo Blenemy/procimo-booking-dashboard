@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { isoDateTimeSchema } from './common';
 import { BOOKING_DURATIONS } from './constants';
-import type { BookingDuration, BookingStatus, SportType } from './constants';
+import type { BookingStatus, SportType } from './constants';
 
 export const createBookingSchema = z.strictObject({
   courtId: z.int().positive(),
@@ -24,7 +24,7 @@ export interface BookingDto {
   };
   startsAt: string;
   endsAt: string;
-  durationHours: BookingDuration;
+  durationHours: number;
   status: BookingStatus;
   totalPriceCents: number;
   createdAt: string;

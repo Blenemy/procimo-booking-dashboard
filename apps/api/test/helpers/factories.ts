@@ -49,7 +49,7 @@ export function createCourt(
 }
 
 export function createBooking(
-  db: Db,
+  db: Pick<Db, 'booking'>,
   {
     userId,
     courtId,
