@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadConfig } from '../src/config';
+import { loadConfig } from '../src/core/config';
 
 const base = { DATABASE_URL: 'mysql://u:p@localhost:3306/courtly' };
 

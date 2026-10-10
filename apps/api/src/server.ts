@@ -1,8 +1,8 @@
 import { createApp } from './app';
-import { systemClock } from './clock';
-import { loadConfig } from './config';
+import { systemClock } from './core/clock';
+import { loadConfig } from './core/config';
+import { createLogger } from './core/logger';
 import { createPrismaClient } from './db/client';
-import { createLogger } from './logger';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel);

@@ -2,11 +2,11 @@ import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
-import type { Clock } from './clock';
-import type { Config } from './config';
+import type { Clock } from './core/clock';
+import type { Config } from './core/config';
+import type { Logger } from './core/logger';
 import type { Db } from './db/client';
 import { errorHandler, notFoundHandler } from './http/errors';
-import type { Logger } from './logger';
 import { systemRoutes } from './modules/system/routes';
 
 export interface AppDeps {

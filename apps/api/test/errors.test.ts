@@ -2,9 +2,9 @@ import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { createLogger } from '../src/core/logger';
 import { AppError, errorHandler } from '../src/http/errors';
 import { parse } from '../src/http/validate';
-import { createLogger } from '../src/logger';
 
 function appThrowing(error: () => unknown) {
   const app = express();
