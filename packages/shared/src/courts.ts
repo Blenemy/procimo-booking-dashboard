@@ -28,6 +28,7 @@ export const createCourtSchema = z
   .strictObject({ ...courtFields, isActive: z.boolean().default(true) })
   .refine(openBeforeClose, openBeforeCloseIssue);
 export type CreateCourtRequest = z.input<typeof createCourtSchema>;
+export type CreateCourtInput = z.output<typeof createCourtSchema>;
 
 export const updateCourtSchema = z
   .strictObject({ ...courtFields, isActive: z.boolean() })

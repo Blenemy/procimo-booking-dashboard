@@ -27,6 +27,16 @@ export function createTestApp(db: Db, overrides: Partial<Omit<AppDeps, 'db'>> = 
   });
 }
 
+export function fixedClock(iso: string) {
+  let current = new Date(iso);
+  return {
+    now: () => current,
+    set: (next: string) => {
+      current = new Date(next);
+    },
+  };
+}
+
 export const testTokenSigner = () => {
   const { jwtSecret, sessionTtlHours } = testConfig();
   return new TokenSigner(jwtSecret, sessionTtlHours);

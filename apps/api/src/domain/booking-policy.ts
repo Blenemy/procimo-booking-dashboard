@@ -32,27 +32,34 @@ export class BookingPolicy {
   validate({ court, startsAt, durationHours, now }: BookingRequest): BookingViolation | null {
     if (!court.isActive) return ERROR_CODES.COURT_INACTIVE;
     if (!this.calendar.isHourAligned(startsAt)) return ERROR_CODES.SLOT_NOT_ALIGNED;
-
-    const openSlots = this.calendar
-      .openingSlots(this.calendar.localDate(startsAt), court)
-      .map((slot) => slot.getTime());
-    const fitsOpeningHours = this.slotsFor(startsAt, durationHours).every((slot) =>
-      openSlots.includes(slot.getTime()),
-    );
-    if (!fitsOpeningHours) return ERROR_CODES.OUTSIDE_OPENING_HOURS;
-
-    if (startsAt <= now) return ERROR_CODES.BOOKING_IN_PAST;
+    if (!this.fitsOpeningHours(court, startsAt, durationHours)) {
+      return ERROR_CODES.OUTSIDE_OPENING_HOURS;
+    }
+    if (this.hasStarted(startsAt, now)) return ERROR_CODES.BOOKING_IN_PAST;
     return null;
   }
 
-  slotsFor(startsAt: Date, durationHours: BookingDuration): Date[] {
+  fitsOpeningHours(hours: OpeningHours, startsAt: Date, durationHours: number): boolean {
+    const openSlots = this.calendar
+      .openingSlots(this.calendar.localDate(startsAt), hours)
+      .map((slot) => slot.getTime());
+    return this.slotsFor(startsAt, durationHours).every((slot) =>
+      openSlots.includes(slot.getTime()),
+    );
+  }
+
+  hasStarted(startsAt: Date, now: Date): boolean {
+    return startsAt <= now;
+  }
+
+  slotsFor(startsAt: Date, durationHours: number): Date[] {
     const start = DateTime.fromJSDate(startsAt);
     return Array.from({ length: durationHours }, (_, hour) =>
       start.plus({ hours: hour }).toJSDate(),
     );
   }
 
-  endsAt(startsAt: Date, durationHours: BookingDuration): Date {
+  endsAt(startsAt: Date, durationHours: number): Date {
     return DateTime.fromJSDate(startsAt).plus({ hours: durationHours }).toJSDate();
   }
 

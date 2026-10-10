@@ -5,6 +5,8 @@ export interface OpeningHours {
   closeHour: number;
 }
 
+export const SLOT_LENGTH_HOURS = 1;
+
 const LOCAL_TIME_FORMAT = 'HH:mm';
 
 export class FacilityCalendar {
@@ -19,7 +21,7 @@ export class FacilityCalendar {
     const dayStart = this.startOfDay(date);
     const dayEnd = dayStart.plus({ days: 1 });
     const slots: Date[] = [];
-    for (let slot = dayStart; slot < dayEnd; slot = slot.plus({ hours: 1 })) {
+    for (let slot = dayStart; slot < dayEnd; slot = slot.plus({ hours: SLOT_LENGTH_HOURS })) {
       if (slot.hour >= openHour && slot.hour < closeHour) slots.push(slot.toJSDate());
     }
     return slots;

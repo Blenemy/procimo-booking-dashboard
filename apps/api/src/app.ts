@@ -6,6 +6,8 @@ import type { Clock } from './core/clock';
 import type { Config } from './core/config';
 import type { Logger } from './core/logger';
 import type { Db } from './db/client';
+import { BookingPolicy } from './domain/booking-policy';
+import { FacilityCalendar } from './domain/facility-calendar';
 import { errorHandler, notFoundHandler } from './http/errors';
 import { requireJsonForMutations } from './http/json-only';
 import { createAuthController } from './modules/auth/controller';
@@ -15,6 +17,10 @@ import { createAuthGuards } from './modules/auth/middleware';
 import { createUsersRepository } from './modules/auth/repository';
 import { authRoutes } from './modules/auth/routes';
 import { createAuthService } from './modules/auth/service';
+import { createCourtsController } from './modules/courts/controller';
+import { createCourtsRepository } from './modules/courts/repository';
+import { courtsRoutes } from './modules/courts/routes';
+import { createCourtsService } from './modules/courts/service';
 import { createSystemController } from './modules/system/controller';
 import { createSystemRepository } from './modules/system/repository';
 import { systemRoutes } from './modules/system/routes';
@@ -52,7 +58,10 @@ export function createApp(deps: AppDeps) {
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(cookieParser());
 
-  const { config, db } = deps;
+  const { config, db, clock } = deps;
+
+  const calendar = new FacilityCalendar(config.timezone);
+  const policy = new BookingPolicy(calendar);
 
   const passwordHasher = new PasswordHasher();
   const tokenSigner = new TokenSigner(config.jwtSecret, config.sessionTtlHours);
@@ -67,11 +76,20 @@ export function createApp(deps: AppDeps) {
     config,
     service: createAuthService({ users, passwordHasher, tokenSigner }),
   });
+  const courtsController = createCourtsController({
+    service: createCourtsService({
+      repository: createCourtsRepository(db),
+      calendar,
+      policy,
+      clock,
+    }),
+  });
 
   const api = express.Router();
   api.use(requireJsonForMutations);
   api.use(systemRoutes({ controller: systemController }));
   api.use('/auth', authRoutes({ controller: authController, auth }));
+  api.use(courtsRoutes({ controller: courtsController, auth }));
   app.use('/api', api);
 
   app.use(notFoundHandler);
