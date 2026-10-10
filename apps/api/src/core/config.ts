@@ -9,17 +9,31 @@ const isIanaTimeZone = (zone: string) => {
   }
 };
 
+const DEFAULTS = {
+  port: 3000,
+  dbPoolSize: 10,
+  timezone: 'Europe/Lisbon',
+  currency: 'EUR',
+  sessionTtlHours: 12,
+};
+
+const CURRENCY_CODE_LENGTH = 3;
+const MIN_JWT_SECRET_LENGTH = 32;
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().positive().default(DEFAULTS.port),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   DATABASE_URL: z.url({ protocol: /^mysql$/ }),
-  DB_POOL_SIZE: z.coerce.number().int().positive().default(10),
+  DB_POOL_SIZE: z.coerce.number().int().positive().default(DEFAULTS.dbPoolSize),
   FACILITY_TIMEZONE: z
     .string()
-    .default('Europe/Lisbon')
+    .default(DEFAULTS.timezone)
     .refine(isIanaTimeZone, 'must be a valid IANA time zone'),
-  CURRENCY: z.string().length(3).toUpperCase().default('EUR'),
+  CURRENCY: z.string().length(CURRENCY_CODE_LENGTH).toUpperCase().default(DEFAULTS.currency),
+  JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
+  SESSION_TTL_HOURS: z.coerce.number().int().positive().default(DEFAULTS.sessionTtlHours),
+  COOKIE_SECURE: z.stringbool().optional(),
 });
 
 export interface Config {
@@ -30,6 +44,9 @@ export interface Config {
   dbPoolSize: number;
   timezone: string;
   currency: string;
+  jwtSecret: string;
+  sessionTtlHours: number;
+  cookieSecure: boolean;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -46,5 +63,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dbPoolSize: e.DB_POOL_SIZE,
     timezone: e.FACILITY_TIMEZONE,
     currency: e.CURRENCY,
+    jwtSecret: e.JWT_SECRET,
+    sessionTtlHours: e.SESSION_TTL_HOURS,
+    cookieSecure: e.COOKIE_SECURE ?? e.NODE_ENV === 'production',
   };
 }

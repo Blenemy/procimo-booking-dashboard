@@ -45,6 +45,9 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: mysql://courtly:courtly@mysql:3306/courtly
+      # Demo-only values so `docker compose up` works out of the box; real deployments inject the secret and serve HTTPS with COOKIE_SECURE=true
+      JWT_SECRET: local-demo-secret-courtly-procimo
+      COOKIE_SECURE: 'false'
     ports:
       - '3000:3000'
     depends_on:

@@ -1,13 +1,19 @@
 import { z } from 'zod';
-import { SPORT_TYPES } from './constants';
+import {
+  COURT_NAME_MAX_LENGTH,
+  HOURS_PER_DAY,
+  LAST_HOUR_OF_DAY,
+  MAX_HOURLY_PRICE_CENTS,
+  SPORT_TYPES,
+} from './constants';
 import type { SlotStatus, SportType } from './constants';
 
 const courtFields = {
-  name: z.string().trim().min(1).max(100),
+  name: z.string().trim().min(1).max(COURT_NAME_MAX_LENGTH),
   sportType: z.enum(SPORT_TYPES),
-  hourlyPriceCents: z.int().min(0).max(1_000_000),
-  openHour: z.int().min(0).max(23),
-  closeHour: z.int().min(1).max(24),
+  hourlyPriceCents: z.int().min(0).max(MAX_HOURLY_PRICE_CENTS),
+  openHour: z.int().min(0).max(LAST_HOUR_OF_DAY),
+  closeHour: z.int().min(1).max(HOURS_PER_DAY),
 };
 
 const openBeforeClose = (c: { openHour?: number; closeHour?: number }) =>

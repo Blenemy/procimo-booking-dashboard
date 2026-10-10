@@ -1,0 +1,8 @@
+const MILLISECONDS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
+
+export const MILLISECONDS_PER_HOUR =
+  MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MILLISECONDS_PER_SECOND;
+
+export const hoursToMilliseconds = (hours: number) => hours * MILLISECONDS_PER_HOUR;

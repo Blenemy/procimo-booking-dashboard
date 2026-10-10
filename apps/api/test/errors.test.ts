@@ -20,7 +20,7 @@ function appThrowing(error: () => unknown) {
 describe('errorHandler', () => {
   it('maps AppError to its status and code', async () => {
     const app = appThrowing(() => {
-      throw new AppError(409, 'SLOT_TAKEN', 'Slot is already booked', { courtId: 1 });
+      throw new AppError('SLOT_TAKEN', 'Slot is already booked', { courtId: 1 });
     });
 
     const res = await request(app).get('/boom');

@@ -7,7 +7,21 @@ import type { Config } from './core/config';
 import type { Logger } from './core/logger';
 import type { Db } from './db/client';
 import { errorHandler, notFoundHandler } from './http/errors';
+import { requireJsonForMutations } from './http/json-only';
+import { createAuthController } from './modules/auth/controller';
+import { PasswordHasher } from './modules/auth/lib/password-hasher';
+import { TokenSigner } from './modules/auth/lib/token-signer';
+import { createAuthGuards } from './modules/auth/middleware';
+import { createUsersRepository } from './modules/auth/repository';
+import { authRoutes } from './modules/auth/routes';
+import { createAuthService } from './modules/auth/service';
+import { createSystemController } from './modules/system/controller';
+import { createSystemRepository } from './modules/system/repository';
 import { systemRoutes } from './modules/system/routes';
+
+const TRUSTED_PROXY_HOPS = 1;
+const JSON_BODY_LIMIT = '10kb';
+const HEALTH_PATH = '/api/health';
 
 export interface AppDeps {
   config: Config;
@@ -19,12 +33,12 @@ export interface AppDeps {
 export function createApp(deps: AppDeps) {
   const app = express();
 
-  app.set('trust proxy', 1);
+  app.set('trust proxy', TRUSTED_PROXY_HOPS);
   app.use(helmet());
   app.use(
     pinoHttp({
       logger: deps.logger,
-      autoLogging: { ignore: (req) => req.url === '/api/health' },
+      autoLogging: { ignore: (req) => req.url === HEALTH_PATH },
       serializers: {
         req: (req: { id: unknown; method: string; url: string }) => ({
           id: req.id,
@@ -35,11 +49,29 @@ export function createApp(deps: AppDeps) {
       },
     }),
   );
-  app.use(express.json({ limit: '10kb' }));
+  app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(cookieParser());
 
+  const { config, db } = deps;
+
+  const passwordHasher = new PasswordHasher();
+  const tokenSigner = new TokenSigner(config.jwtSecret, config.sessionTtlHours);
+  const users = createUsersRepository(db);
+  const auth = createAuthGuards({ users, tokenSigner });
+
+  const systemController = createSystemController({
+    config,
+    repository: createSystemRepository(db),
+  });
+  const authController = createAuthController({
+    config,
+    service: createAuthService({ users, passwordHasher, tokenSigner }),
+  });
+
   const api = express.Router();
-  api.use(systemRoutes(deps));
+  api.use(requireJsonForMutations);
+  api.use(systemRoutes({ controller: systemController }));
+  api.use('/auth', authRoutes({ controller: authController, auth }));
   app.use('/api', api);
 
   app.use(notFoundHandler);

@@ -10,7 +10,9 @@ export function testDatabaseUrl(): string {
   return url;
 }
 
-export const createTestDb = (): Db => createPrismaClient(testDatabaseUrl(), 20);
+const TEST_DB_POOL_SIZE = 20;
+
+export const createTestDb = (): Db => createPrismaClient(testDatabaseUrl(), TEST_DB_POOL_SIZE);
 
 export async function resetDb(db: Db) {
   await db.$transaction([
