@@ -20,14 +20,18 @@ export function createEventsController({ events }: { events: EventBus }) {
     res.write(`retry: ${RECONNECT_DELAY_MS}\n\n`);
 
     const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), HEARTBEAT_INTERVAL_MS);
-    const unsubscribe = events.subscribe(
-      (event) => res.write(frame(event)),
-      () => res.end(),
-    );
-    res.on('close', () => {
+    const stop = () => {
       clearInterval(heartbeat);
       unsubscribe();
-    });
+    };
+    const unsubscribe = events.subscribe(
+      (event) => res.write(frame(event)),
+      () => {
+        stop();
+        res.end();
+      },
+    );
+    res.on('close', stop);
   };
 
   return { stream };
