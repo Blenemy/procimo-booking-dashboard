@@ -2,6 +2,7 @@ import { createApp } from '../../src/app';
 import type { AppDeps } from '../../src/app';
 import { systemClock } from '../../src/core/clock';
 import { loadConfig } from '../../src/core/config';
+import { EventBus } from '../../src/core/event-bus';
 import { createLogger } from '../../src/core/logger';
 import type { Db } from '../../src/db/client';
 import { SESSION_COOKIE } from '../../src/modules/auth/lib/session-cookie';
@@ -23,6 +24,7 @@ export function createTestApp(db: Db, overrides: Partial<Omit<AppDeps, 'db'>> = 
     db,
     clock: systemClock,
     logger: createLogger('silent'),
+    events: new EventBus(),
     ...overrides,
   });
 }

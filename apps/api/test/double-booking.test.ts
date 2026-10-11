@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { EventBus } from '../src/core/event-bus';
 import { isTransactionConflict } from '../src/db/errors';
 import { DEFAULT_TRANSACTION_RETRY, TransactionRetry } from '../src/db/transaction-retry';
 import { BookingPolicy } from '../src/domain/booking-policy';
@@ -56,6 +57,7 @@ const buildService = ({
     policy,
     clock,
     currency,
+    events: new EventBus(),
   });
 
 const outcome = (attempt: Promise<unknown>) =>

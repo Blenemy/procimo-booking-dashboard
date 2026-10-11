@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Clock } from './core/clock';
 import type { Config } from './core/config';
+import type { EventBus } from './core/event-bus';
 import type { Logger } from './core/logger';
 import type { Db } from './db/client';
 import { TransactionRetry } from './db/transaction-retry';
@@ -26,6 +27,8 @@ import { createCourtsController } from './modules/courts/controller';
 import { createCourtsRepository } from './modules/courts/repository';
 import { courtsRoutes } from './modules/courts/routes';
 import { createCourtsService } from './modules/courts/service';
+import { createEventsController } from './modules/events/controller';
+import { eventsRoutes } from './modules/events/routes';
 import { createSystemController } from './modules/system/controller';
 import { createSystemRepository } from './modules/system/repository';
 import { systemRoutes } from './modules/system/routes';
@@ -39,6 +42,7 @@ export interface AppDeps {
   db: Db;
   clock: Clock;
   logger: Logger;
+  events: EventBus;
 }
 
 export function createApp(deps: AppDeps) {
@@ -63,7 +67,7 @@ export function createApp(deps: AppDeps) {
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(cookieParser());
 
-  const { config, db, clock } = deps;
+  const { config, db, clock, events } = deps;
 
   const calendar = new FacilityCalendar(config.timezone);
   const policy = new BookingPolicy(calendar);
@@ -99,8 +103,10 @@ export function createApp(deps: AppDeps) {
       policy,
       clock,
       currency: config.currency,
+      events,
     }),
   });
+  const eventsController = createEventsController({ events });
 
   const api = express.Router();
   api.use(requireJsonForMutations);
@@ -108,6 +114,7 @@ export function createApp(deps: AppDeps) {
   api.use('/auth', authRoutes({ controller: authController, auth }));
   api.use(courtsRoutes({ controller: courtsController, auth }));
   api.use(bookingsRoutes({ controller: bookingsController, auth }));
+  api.use(eventsRoutes({ controller: eventsController, auth }));
   app.use('/api', api);
 
   app.use(notFoundHandler);

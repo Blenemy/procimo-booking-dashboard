@@ -1,4 +1,4 @@
-import { ERROR_CODES } from '@courtly/shared';
+import { AVAILABILITY_CHANGED_EVENT, ERROR_CODES } from '@courtly/shared';
 import type {
   AdminBookingDto,
   AdminDayDto,
@@ -7,6 +7,7 @@ import type {
   CreateBookingRequest,
 } from '@courtly/shared';
 import type { Clock } from '../../core/clock';
+import type { EventBus } from '../../core/event-bus';
 import { BOOKING_VIOLATIONS, CANCELLATION_CUTOFF_HOURS } from '../../domain/booking-policy';
 import type { BookingPolicy } from '../../domain/booking-policy';
 import type { FacilityCalendar } from '../../domain/facility-calendar';
@@ -34,6 +35,7 @@ export function createBookingsService({
   policy,
   clock,
   currency,
+  events,
 }: {
   repository: BookingsRepository;
   courts: CourtsRepository;
@@ -41,6 +43,7 @@ export function createBookingsService({
   policy: BookingPolicy;
   clock: Clock;
   currency: string;
+  events: EventBus;
 }) {
   const toBookingDto = (booking: BookingWithCourt): BookingDto => ({
     id: booking.id,
@@ -54,6 +57,12 @@ export function createBookingsService({
     cancelledAt: booking.cancelledAt?.toISOString() ?? null,
     cancellableUntil: policy.cancellableUntil(booking.startsAt).toISOString(),
   });
+
+  const announceAvailabilityChange = (booking: { courtId: number; startsAt: Date }) =>
+    events.publish({
+      type: AVAILABILITY_CHANGED_EVENT,
+      data: { courtId: booking.courtId, date: calendar.localDate(booking.startsAt) },
+    });
 
   const toAdminBookingDto = (booking: BookingWithCourtAndUser): AdminBookingDto => ({
     ...toBookingDto(booking),
@@ -84,6 +93,7 @@ export function createBookingsService({
         slots,
       });
       if (!booking) throw slotTaken();
+      announceAvailabilityChange(booking);
       return toBookingDto(booking);
     },
 
@@ -97,6 +107,7 @@ export function createBookingsService({
 
       const cancelled = await repository.cancel(booking.id, userId, now);
       if (!cancelled) throw alreadyCancelled();
+      announceAvailabilityChange(cancelled);
       return toBookingDto(cancelled);
     },
 

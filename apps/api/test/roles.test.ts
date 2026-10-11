@@ -28,6 +28,7 @@ const USER_ROUTES: [Method, string][] = [
 const SHARED_ROUTES: [Method, string][] = [
   ['get', '/api/courts'],
   ['get', '/api/courts/1/availability?date=2026-12-16'],
+  ['get', '/api/events'],
 ];
 
 const call = (method: Method, path: string, cookie?: string) => {
