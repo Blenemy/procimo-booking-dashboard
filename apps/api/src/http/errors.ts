@@ -1,5 +1,5 @@
 import { ERROR_CODES } from '@courtly/shared';
-import type { ApiErrorBody, ErrorCode } from '@courtly/shared';
+import type { ApiErrorBody, ErrorCode, ValidationIssue } from '@courtly/shared';
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { ERROR_STATUS, HTTP_STATUS } from './status';
@@ -38,7 +38,10 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     return;
   }
   if (err instanceof ZodError) {
-    const details = err.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
+    const details: ValidationIssue[] = err.issues.map((i) => ({
+      path: i.path.join('.'),
+      message: i.message,
+    }));
     res
       .status(ERROR_STATUS.VALIDATION_ERROR)
       .json(body(ERROR_CODES.VALIDATION_ERROR, 'Invalid request', details));

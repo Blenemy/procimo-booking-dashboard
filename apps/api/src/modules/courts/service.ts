@@ -1,4 +1,4 @@
-import { ERROR_CODES } from '@courtly/shared';
+import { ERROR_CODES, OPEN_BEFORE_CLOSE_ISSUE } from '@courtly/shared';
 import type {
   AvailabilityDto,
   CourtDto,
@@ -75,7 +75,10 @@ export function createCourtsService({
       const closeHour = changes.closeHour ?? current.closeHour;
       if (openHour >= closeHour) {
         throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Invalid request', [
-          { path: 'closeHour', message: 'openHour must be before closeHour' },
+          {
+            path: OPEN_BEFORE_CLOSE_ISSUE.path.join('.'),
+            message: OPEN_BEFORE_CLOSE_ISSUE.message,
+          },
         ]);
       }
 

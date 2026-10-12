@@ -23,6 +23,11 @@ export const ERROR_CODES = {
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 
+export interface ValidationIssue {
+  path: string;
+  message: string;
+}
+
 export interface ApiErrorBody {
   error: {
     code: ErrorCode;
