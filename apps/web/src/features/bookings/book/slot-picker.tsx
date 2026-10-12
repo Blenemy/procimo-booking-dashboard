@@ -22,7 +22,7 @@ const SLOT_LOOKS: Record<SlotLook, { className: string; description: string }> =
     description: 'your booking',
   },
   taken: {
-    className: 'border-transparent bg-muted/70 text-faint line-through',
+    className: 'border-warning-border bg-warning-soft text-warning/75 line-through',
     description: 'taken',
   },
   past: {
@@ -33,7 +33,7 @@ const SLOT_LOOKS: Record<SlotLook, { className: string; description: string }> =
 
 const LEGEND = [
   { label: 'Available', dot: 'bg-success' },
-  { label: 'Taken', dot: 'bg-faint/60' },
+  { label: 'Taken', dot: 'bg-warning' },
   { label: 'Yours', dot: 'bg-lime' },
   { label: 'Selected', dot: 'bg-primary' },
 ];
