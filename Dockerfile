@@ -26,3 +26,11 @@ CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node --enable-source-maps d
 FROM build AS api-test
 WORKDIR /repo/apps/api
 CMD ["pnpm", "exec", "vitest", "run"]
+
+FROM deps AS web-build
+RUN pnpm --filter @courtly/web build
+
+FROM nginx:1.28-alpine AS web
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY --from=web-build /repo/apps/web/dist /usr/share/nginx/html
+EXPOSE 80

@@ -61,6 +61,16 @@ services:
       retries: 20
       start_period: 5s
 
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - '8080:80'
+    depends_on:
+      api:
+        condition: service_healthy
+
   api-test:
     profiles: [test]
     build:
