@@ -1,3 +1,21 @@
+## Run the project
+
+```bash
+git clone <repo-url> courtly
+cd courtly
+docker compose up --build
+```
+
+the app is on http://localhost:8080. all seeded accounts use the password `password123`: `admin@courtly.test`, `alice@courtly.test`, `bob@courtly.test`.
+
+## Run the tests
+
+backend tests run against a real mysql, with the stack from above running:
+
+```bash
+docker compose --profile test run --rm api-test
+```
+
 ## Tech stack
 
 - **Backend:** Node.js, Express 5, Prisma 7 with MySQL 8.4, Luxon, jose, Pino
@@ -23,6 +41,18 @@ ui is tailwind with shadcn/ui. shadcn is not a dependency but copied components 
 
 routing is react router, and the url is the state for the selected date, court and bookings tab, so links and the back button work.
 --
+
+## How double bookings are prevented
+
+the guarantee lives in the database, not in the code. every booking writes one row per hour into the `booking_slots` table, and its primary key is `(court_id, slot_start)`. a 10:00–12:00 booking writes 10:00 and 11:00, so any other booking that touches even one of these hours tries to insert the same key, and mysql rejects it no matter how the requests interleave. a unique index on the start time in `bookings` would not be enough: 10:00–12:00 and 11:00–12:00 start at different times but still overlap.
+
+the booking row and its slot rows are inserted in one transaction, so a failed booking leaves nothing behind.
+
+mysql can still report a deadlock when the transaction holding a contested key rolls back while others wait on it. in this case the transaction is retried up to 3 times with a short random delay (`TransactionRetry`), so the client gets 201 or 409, never 500. slots are inserted in ascending order, so overlapping two-hour bookings lock keys in the same order.
+
+cancelling sets the booking to `CANCELLED` and deletes its slot rows in one transaction, so the time becomes free again and the booking stays in the history. the update only matches a `CONFIRMED` booking, so of two cancellations at the same moment only one succeeds.
+
+the code is in `apps/api/src/modules/bookings/repository.ts`, `apps/api/src/db/transaction-retry.ts` and the schema in `apps/api/prisma`. tests are in `apps/api/test/double-booking.test.ts`.
 
 ## What i would add up:
 
