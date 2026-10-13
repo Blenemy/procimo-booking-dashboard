@@ -2,7 +2,7 @@
 
 ```bash
 git clone <repo-url> courtly
-cd courtly
+cd procimo-booking-dashboard/
 docker compose up --build
 ```
 
